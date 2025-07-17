@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
+import time
 
 app = Flask(__name__)
 
@@ -77,7 +78,9 @@ def is_gold_related(text):
 
 def extract_date_from_page(url):
     try:
-        sub_res = requests.get(url, timeout=8)
+        if not url.endswith(".htm") and not "news" in url:
+            return None
+        sub_res = requests.get(url, timeout=5)
         sub_text = sub_res.text
         return extract_date(sub_text)
     except:
@@ -93,7 +96,7 @@ def index():
         try:
             res = requests.get(url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.find_all("a")
+            links = soup.find_all("a")[:30]  # בודק רק 30 קישורים
 
             for link in links:
                 text = link.get_text(strip=True)
@@ -108,6 +111,7 @@ def index():
                     date_obj = extract_date(text)
 
                     if not date_obj:
+                        time.sleep(0.5)  # שהייה למניעת עומס
                         date_obj = extract_date_from_page(href)
 
                     if date_obj:
@@ -139,3 +143,6 @@ def index():
             })
 
     return render_template_string(TEMPLATE, results=results)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
