@@ -144,8 +144,4 @@ def index():
 
     return render_template_string(TEMPLATE, results=results)
 
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))  # ברירת מחדל ל־5000 אם אין PORT מהסביבה
-    app.run(host="0.0.0.0", port=port)
 
