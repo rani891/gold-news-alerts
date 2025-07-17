@@ -4,9 +4,11 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import time
+import os
 
 app = Flask(__name__)
 
+# =================== קישורי המקורות ===================
 sources = {
     "Federal Reserve": "https://www.federalreserve.gov/newsevents/speeches.htm",
     "ECB": "https://www.ecb.europa.eu/press/key/html/index.en.html",
@@ -14,9 +16,11 @@ sources = {
     "IMF": "https://www.imf.org/en/News",
 }
 
+# =================== מילות מפתח ===================
 keywords = ["powell", "lagarde", "barr", "waller", "bailey", "kuroda", "speech", "remarks", "conference", "testimony", "statement"]
 gold_keywords = ["gold", "xauusd", "inflation", "interest", "dollar", "monetary", "rates", "commodities"]
 
+# =================== תבניות תאריך ===================
 date_patterns = [
     r"(\d{1,2}/\d{1,2}/\d{4})",
     r"(\d{1,2}/\d{1,2})",
@@ -25,6 +29,7 @@ date_patterns = [
     r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)",
 ]
 
+# =================== HTML ===================
 TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -52,6 +57,7 @@ TEMPLATE = """
 </html>
 """
 
+# =================== עוזרי ניתוח טקסט ===================
 def extract_date(text):
     for pattern in date_patterns:
         matches = re.findall(pattern, text)
@@ -86,7 +92,13 @@ def extract_date_from_page(url):
     except:
         return None
 
+# =================== מסך תקינות ("/") ===================
 @app.route("/")
+def root():
+    return "✅ שרת באוויר. הקוד שלך תקין."
+
+# =================== דף התראות ===================
+@app.route("/alerts")
 def index():
     results = []
     today = datetime.now()
@@ -111,7 +123,7 @@ def index():
                     date_obj = extract_date(text)
 
                     if not date_obj:
-                        time.sleep(0.5)  # שהייה למניעת עומס
+                        time.sleep(0.5)
                         date_obj = extract_date_from_page(href)
 
                     if date_obj:
@@ -144,4 +156,7 @@ def index():
 
     return render_template_string(TEMPLATE, results=results)
 
-
+# =================== הרצה ===================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
