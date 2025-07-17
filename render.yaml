@@ -3,7 +3,7 @@ services:
     name: gold-news-alerts
     env: python
     buildCommand: ""
-    startCommand: gunicorn app_updated:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app_updated:app --timeout 60 --bind 0.0.0.0:$PORT
     envVars:
       - key: PORT
         value: 10000
