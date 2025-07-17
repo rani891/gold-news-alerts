@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
@@ -11,20 +10,28 @@ app = Flask(__name__)
 
 # =================== קישורי המקורות ===================
 sources = {
-    "Federal Reserve": "https://www.federalreserve.gov/newsevents/speeches.htm",
-    "ECB": "https://www.ecb.europa.eu/press/key/html/index.en.html",
-    "BOJ": "https://www.boj.or.jp/en/announcements/press/index.htm",
+    "Federal Reserve": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
+    "ECB": "https://www.ecb.europa.eu/press/pr/date/html/index.en.html",
+    "BOJ": "https://www.boj.or.jp/en/announcements/release_2024/index.htm/",
     "IMF": "https://www.imf.org/en/News",
 }
 
 # =================== מילות מפתח ===================
 keywords = [
-    "powell", "lagarde", "yellen", "barr", "waller", "bailey", "kuroda",
-    "kashkari", "goolsbee", "fomc", "ecb", "boj", "imf", "central bank",
-    "rate decision", "interest rate", "monetary policy", "inflation",
-    "testimony", "remarks", "statement", "conference", "policy speech"
+    # אנשים
+    "powell", "lagarde", "yellen", "barr", "waller", "bailey", "kuroda", "kashkari", "goolsbee",
+
+    # הודעות שמשפיעות
+    "fomc", "ecb", "boj", "imf", "central bank",
+    "interest rate", "rate hike", "rate decision",
+    "monetary policy", "fiscal policy", "statement",
+    "press release", "testimony", "conference", "minutes", "remarks"
 ]
-gold_keywords = ["gold", "xauusd", "inflation", "interest", "dollar", "monetary", "rates", "commodities"]
+
+gold_keywords = [
+    "gold", "xauusd", "inflation", "interest", "dollar", "commodities",
+    "usd", "rates", "yield", "bond", "tightening", "hawkish", "dovish"
+]
 
 # =================== תבניות תאריך ===================
 date_patterns = [
@@ -42,24 +49,24 @@ TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset=\"UTF-8\">
+    <meta charset="UTF-8">
     <title>GOLD-news-alerts</title>
 </head>
 <body>
-    <h2>🔔 נאומים קרובים עם פוטנציאל השפעה (היום ומחר) 🔔</h2>
+    <h2>🔔 התראות רלוונטיות לזהב ולדולר – היום ומחר 🔔</h2>
     {% if results %}
         <ul>
             {% for res in results %}
                 <li>
                     <b>{{ res['source'] }}</b>:
-                    <a href=\"{{ res['url'] }}\" target=\"_blank\">{{ res['text'] }}</a>
-                    {% if res['gold'] %} <span style=\"color:orange\">🔶 Gold Impact</span>{% endif %}
-                    {% if res['date'] != \"לא מזוהה\" %} ({{ res['date'] }}){% endif %}
+                    <a href="{{ res['url'] }}" target="_blank">{{ res['text'] }}</a>
+                    {% if res['gold'] %} <span style="color:orange">🔶 Gold Impact</span>{% endif %}
+                    {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}
                 </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p>אין נאומים קרובים שזוהו להיום או מחר.</p>
+        <p style="color:red;"><b>⚠️ אין תוצאה רלוונטית.</b></p>
     {% endif %}
 </body>
 </html>
@@ -100,13 +107,8 @@ def extract_date_from_page(url):
     except:
         return None
 
-# =================== מסך תקינות ("/") ===================
-@app.route("/")
-def root():
-    return "✅ שרת באוויר. הקוד שלך תקין."
-
 # =================== דף התראות ===================
-@app.route("/alerts")
+@app.route("/")
 def index():
     results = []
     today = datetime.now()
@@ -116,7 +118,7 @@ def index():
         try:
             res = requests.get(url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.find_all("a")[:100]  # בודק 100 קישורים
+            links = soup.find_all("a")[:100]
 
             for link in links:
                 text = link.get_text(strip=True)
@@ -129,30 +131,26 @@ def index():
                 if is_relevant(text):
                     gold_related = is_gold_related(text)
                     date_obj = extract_date(text)
-
                     if not date_obj:
                         time.sleep(0.5)
                         date_obj = extract_date_from_page(href)
 
-                    if date_obj:
-                        date_str = date_obj.strftime("%d/%m/%Y")
-                        if today.date() <= date_obj.date() <= tomorrow.date():
-                            results.append({
-                                "source": name,
-                                "url": href,
-                                "text": text,
-                                "date": date_str,
-                                "gold": gold_related
-                            })
-                    else:
-                        if gold_related:
-                            results.append({
-                                "source": name,
-                                "url": href,
-                                "text": text,
-                                "date": "לא מזוהה",
-                                "gold": gold_related
-                            })
+                    if date_obj and today.date() <= date_obj.date() <= tomorrow.date():
+                        results.append({
+                            "source": name,
+                            "url": href,
+                            "text": text,
+                            "date": date_obj.strftime("%d/%m/%Y"),
+                            "gold": gold_related
+                        })
+                    elif not date_obj and gold_related:
+                        results.append({
+                            "source": name,
+                            "url": href,
+                            "text": text,
+                            "date": "לא מזוהה",
+                            "gold": gold_related
+                        })
 
         except Exception as e:
             results.append({
