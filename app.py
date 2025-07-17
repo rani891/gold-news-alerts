@@ -139,4 +139,3 @@ def index():
             })
 
     return render_template_string(TEMPLATE, results=results)
-
