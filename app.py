@@ -101,7 +101,7 @@ def extract_date_from_page(url):
     try:
         if not url.endswith(".htm") and not "news" in url:
             return None
-        sub_res = requests.get(url, timeout=5)
+        sub_res = requests.get(url, timeout=3)
         sub_text = sub_res.text
         return extract_date(sub_text)
     except:
