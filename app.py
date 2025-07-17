@@ -17,11 +17,11 @@ keywords = ["powell", "lagarde", "barr", "waller", "bailey", "kuroda", "speech",
 gold_keywords = ["gold", "xauusd", "inflation", "interest", "dollar", "monetary", "rates", "commodities"]
 
 date_patterns = [
-    r"(\d{1,2}/\d{1,2}/\d{4})",               # 17/07/2025
-    r"(\d{1,2}/\d{1,2})",                     # 17/07
-    r"(\d{1,2}\s+\w+\s+\d{4})",               # 17 July 2025
-    r"(\w+\s+\d{1,2},?\s*\d{4}?)",            # July 17, 2025
-    r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)",  # from inside pages
+    r"(\d{1,2}/\d{1,2}/\d{4})",
+    r"(\d{1,2}/\d{1,2})",
+    r"(\d{1,2}\s+\w+\s+\d{4})",
+    r"(\w+\s+\d{1,2},?\s*\d{4}?)",
+    r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)",
 ]
 
 TEMPLATE = """
@@ -107,7 +107,6 @@ def index():
                     gold_related = is_gold_related(text)
                     date_obj = extract_date(text)
 
-                    # אם אין תאריך בכותרת – נבדוק בגוף הדף
                     if not date_obj:
                         date_obj = extract_date_from_page(href)
 
@@ -141,4 +140,3 @@ def index():
 
     return render_template_string(TEMPLATE, results=results)
 
-app.run(host="0.0.0.0", port=5000)
