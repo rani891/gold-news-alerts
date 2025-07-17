@@ -146,8 +146,6 @@ def index():
 
 if __name__ == "__main__":
     import os
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # ברירת מחדל ל־5000 אם אין PORT מהסביבה
     app.run(host="0.0.0.0", port=port)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
