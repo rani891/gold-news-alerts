@@ -132,7 +132,6 @@ def index():
                     gold_related = is_gold_related(text)
                     date_obj = extract_date(text)
                     if not date_obj:
-                        time.sleep(0.5)
                         date_obj = extract_date_from_page(href)
 
                     if date_obj and today.date() <= date_obj.date() <= tomorrow.date():
