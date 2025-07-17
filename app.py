@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
@@ -17,14 +18,21 @@ sources = {
 }
 
 # =================== מילות מפתח ===================
-keywords = ["powell", "lagarde", "barr", "waller", "bailey", "kuroda", "speech", "remarks", "conference", "testimony", "statement"]
+keywords = [
+    "powell", "lagarde", "yellen", "barr", "waller", "bailey", "kuroda",
+    "kashkari", "goolsbee", "fomc", "ecb", "boj", "imf", "central bank",
+    "rate decision", "interest rate", "monetary policy", "inflation",
+    "testimony", "remarks", "statement", "conference", "policy speech"
+]
 gold_keywords = ["gold", "xauusd", "inflation", "interest", "dollar", "monetary", "rates", "commodities"]
 
 # =================== תבניות תאריך ===================
 date_patterns = [
     r"(\d{1,2}/\d{1,2}/\d{4})",
     r"(\d{1,2}/\d{1,2})",
+    r"(\d{1,2}\.\d{1,2}\.\d{4})",
     r"(\d{1,2}\s+\w+\s+\d{4})",
+    r"(\d{1,2}\s+\w+\s+\d{2})",
     r"(\w+\s+\d{1,2},?\s*\d{4}?)",
     r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)",
 ]
@@ -34,7 +42,7 @@ TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset=\"UTF-8\">
     <title>GOLD-news-alerts</title>
 </head>
 <body>
@@ -44,9 +52,9 @@ TEMPLATE = """
             {% for res in results %}
                 <li>
                     <b>{{ res['source'] }}</b>:
-                    <a href="{{ res['url'] }}" target="_blank">{{ res['text'] }}</a>
-                    {% if res['gold'] %} <span style="color:orange">🔶 Gold Impact</span>{% endif %}
-                    {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}
+                    <a href=\"{{ res['url'] }}\" target=\"_blank\">{{ res['text'] }}</a>
+                    {% if res['gold'] %} <span style=\"color:orange\">🔶 Gold Impact</span>{% endif %}
+                    {% if res['date'] != \"לא מזוהה\" %} ({{ res['date'] }}){% endif %}
                 </li>
             {% endfor %}
         </ul>
@@ -64,7 +72,7 @@ def extract_date(text):
         for match in matches:
             try:
                 date_str = match if isinstance(match, str) else match[-1]
-                for fmt in ("%d/%m/%Y", "%d/%m", "%d %B %Y", "%B %d, %Y", "%B %d"):
+                for fmt in ("%d/%m/%Y", "%d/%m", "%d.%m.%Y", "%d %B %Y", "%d %B %y", "%B %d, %Y", "%B %d"):
                     try:
                         parsed = datetime.strptime(date_str.strip(), fmt)
                         if parsed.year == 1900:
@@ -108,7 +116,7 @@ def index():
         try:
             res = requests.get(url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.find_all("a")[:30]  # בודק רק 30 קישורים
+            links = soup.find_all("a")[:100]  # בודק 100 קישורים
 
             for link in links:
                 text = link.get_text(strip=True)
@@ -137,13 +145,14 @@ def index():
                                 "gold": gold_related
                             })
                     else:
-                        results.append({
-                            "source": name,
-                            "url": href,
-                            "text": text,
-                            "date": "לא מזוהה",
-                            "gold": gold_related
-                        })
+                        if gold_related:
+                            results.append({
+                                "source": name,
+                                "url": href,
+                                "text": text,
+                                "date": "לא מזוהה",
+                                "gold": gold_related
+                            })
 
         except Exception as e:
             results.append({
