@@ -1,19 +1,22 @@
+
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 import re
-import time
 import os
+
 def load_keywords(path):
     with open(path, "r", encoding="utf-8") as f:
         return [line.strip().lower() for line in f if line.strip()]
 
 keywords = load_keywords("keywords.txt")
 gold_keywords = load_keywords("gold_keywords.txt")
+up_keywords = ["hawkish", "rate hike", "tightening", "inflation rising", "yields up", "strong dollar"]
+down_keywords = ["dovish", "rate cut", "easing", "weak dollar", "deflation", "bond buying"]
+
 app = Flask(__name__)
 
-# =================== קישורי המקורות ===================
 sources = {
     "Federal Reserve": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
     "ECB": "https://www.ecb.europa.eu/press/pr/date/html/index.en.html",
@@ -21,7 +24,6 @@ sources = {
     "IMF": "https://www.imf.org/en/News",
 }
 
-# =================== תבניות תאריך ===================
 date_patterns = [
     r"(\d{1,2}/\d{1,2}/\d{4})",
     r"(\d{1,2}/\d{1,2})",
@@ -32,23 +34,20 @@ date_patterns = [
     r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)",
 ]
 
-# =================== HTML ===================
 TEMPLATE = """
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <title>GOLD-news-alerts</title>
-</head>
+<head><meta charset="UTF-8"><title>GOLD-news-alerts</title></head>
 <body>
-    <h2>🔔 התראות רלוונטיות לזהב ולדולר – היום ומחר 🔔</h2>
+    <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
     {% if results %}
         <ul>
             {% for res in results %}
                 <li>
                     <b>{{ res['source'] }}</b>:
                     <a href="{{ res['url'] }}" target="_blank">{{ res['text'] }}</a>
-                    {% if res['gold'] %} <span style="color:orange">🔶 Gold Impact</span>{% endif %}
+                    {% if res['gold'] %} <span style="color:orange">🔶 Gold/USD</span>{% endif %}
+                    {% if res['direction'] == 'up' %} 🔼{% elif res['direction'] == 'down' %} 🔽{% endif %}
                     {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}
                 </li>
             {% endfor %}
@@ -60,7 +59,6 @@ TEMPLATE = """
 </html>
 """
 
-# =================== עוזרי ניתוח טקסט ===================
 def extract_date(text):
     for pattern in date_patterns:
         matches = re.findall(pattern, text)
@@ -80,10 +78,18 @@ def extract_date(text):
     return None
 
 def is_relevant(text):
-    return any(word.lower() in text.lower() for word in keywords)
+    return any(word in text.lower() for word in keywords)
 
 def is_gold_related(text):
-    return any(word.lower() in text.lower() for word in gold_keywords)
+    return any(word in text.lower() for word in gold_keywords)
+
+def get_direction(text):
+    txt = text.lower()
+    if any(word in txt for word in up_keywords):
+        return "up"
+    elif any(word in txt for word in down_keywords):
+        return "down"
+    return ""
 
 def extract_date_from_page(url):
     try:
@@ -95,19 +101,14 @@ def extract_date_from_page(url):
     except:
         return None
 
-# =================== דף התראות ===================
 @app.route("/")
 def index():
     results = []
-    today = datetime.now()
-    tomorrow = today + timedelta(days=1)
-
     for name, url in sources.items():
         try:
             res = requests.get(url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = soup.find_all("a")[:100]
-
             for link in links:
                 text = link.get_text(strip=True)
                 href = link.get("href", "")
@@ -121,36 +122,25 @@ def index():
                     date_obj = extract_date(text)
                     if not date_obj:
                         date_obj = extract_date_from_page(href)
-
-                    if date_obj and today.date() <= date_obj.date() <= tomorrow.date():
-                        results.append({
-                            "source": name,
-                            "url": href,
-                            "text": text,
-                            "date": date_obj.strftime("%d/%m/%Y"),
-                            "gold": gold_related
-                        })
-                    elif not date_obj and gold_related:
-                        results.append({
-                            "source": name,
-                            "url": href,
-                            "text": text,
-                            "date": "לא מזוהה",
-                            "gold": gold_related
-                        })
-
+                    results.append({
+                        "source": name,
+                        "url": href,
+                        "text": text,
+                        "date": date_obj.strftime("%d/%m/%Y") if date_obj else "לא מזוהה",
+                        "gold": gold_related,
+                        "direction": get_direction(text)
+                    })
         except Exception as e:
             results.append({
                 "source": name,
                 "url": url,
                 "text": f"שגיאה: {str(e)}",
                 "date": "-",
-                "gold": False
+                "gold": False,
+                "direction": ""
             })
-
     return render_template_string(TEMPLATE, results=results)
 
-# =================== הרצה ===================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
