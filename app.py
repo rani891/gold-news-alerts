@@ -1,5 +1,3 @@
-# גרסה משופרת (בקרוב)
-# TODO: להסיר נאומים ישנים ולהוסיף מקורות נוספים
 
 from flask import Flask, render_template_string
 import requests
@@ -10,7 +8,6 @@ import os
 
 app = Flask(__name__)
 
-# טען מילות מפתח מקבצים חיצוניים
 def load_keywords(path):
     with open(path, "r", encoding="utf-8") as f:
         return [line.strip().lower() for line in f if line.strip()]
@@ -20,27 +17,22 @@ gold_keywords = load_keywords("gold_keywords.txt")
 up_keywords = ["hawkish", "rate hike", "tightening", "inflation rising", "yields up", "strong dollar"]
 down_keywords = ["dovish", "rate cut", "easing", "weak dollar", "deflation", "bond buying"]
 
-# מקורות רשמיים (להרחיב כאן)
 sources = {
     "Federal Reserve": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
     "ECB": "https://www.ecb.europa.eu/press/pr/date/html/index.en.html",
     "BOJ": "https://www.boj.or.jp/en/announcements/release_2024/index.htm/",
     "IMF": "https://www.imf.org/en/News",
-    # חדש
     "Bank of England": "https://www.bankofengland.co.uk/news",
     "US Treasury": "https://home.treasury.gov/news",
     "G7": "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/g7/news-nouvelles.aspx?lang=eng",
 }
 
-# תבניות תאריכים
 patterns = [
     r"(\d{1,2}/\d{1,2}/\d{4})", r"(\d{1,2}/\d{1,2})",
     r"(\d{1,2}\.\d{1,2}\.\d{4})", r"(\d{1,2}\s+\w+\s+\d{4})",
     r"(\d{1,2}\s+\w+\s+\d{2})", r"(\w+\s+\d{1,2},?\s*\d{4}?)",
     r"(Published|Date|Updated on):?\s*(\w+\s+\d{1,2},?\s*\d{4}?)"
 ]
-
-# עוזרי ניתוח
 
 def extract_date(text):
     for p in patterns:
@@ -74,7 +66,6 @@ def get_direction(text):
     if any(w in txt for w in down_keywords): return "down"
     return ""
 
-# תבנית HTML
 TEMPLATE = """
 <!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
 <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
@@ -88,11 +79,10 @@ TEMPLATE = """
 </body></html>
 """
 
-# ראוט ראשי
 @app.route("/")
 def index():
     results = []
-    cutoff = datetime.now() - timedelta(days=60)  # סינון ישנים מעל חודשיים
+    cutoff = datetime.now() - timedelta(days=60)
     for name, url in sources.items():
         try:
             soup = BeautifulSoup(requests.get(url, timeout=10).text, "html.parser")
@@ -120,7 +110,6 @@ def index():
             results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
     return render_template_string(TEMPLATE, results=results)
 
-# הרצה
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
