@@ -5,7 +5,12 @@ from datetime import datetime, timedelta
 import re
 import time
 import os
+def load_keywords(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip().lower() for line in f if line.strip()]
 
+keywords = load_keywords("keywords.txt")
+gold_keywords = load_keywords("gold_keywords.txt")
 app = Flask(__name__)
 
 # =================== קישורי המקורות ===================
@@ -15,23 +20,6 @@ sources = {
     "BOJ": "https://www.boj.or.jp/en/announcements/release_2024/index.htm/",
     "IMF": "https://www.imf.org/en/News",
 }
-
-# =================== מילות מפתח ===================
-keywords = [
-    # אנשים
-    "powell", "lagarde", "yellen", "barr", "waller", "bailey", "kuroda", "kashkari", "goolsbee",
-
-    # הודעות שמשפיעות
-    "fomc", "ecb", "boj", "imf", "central bank",
-    "interest rate", "rate hike", "rate decision",
-    "monetary policy", "fiscal policy", "statement",
-    "press release", "testimony", "conference", "minutes", "remarks"
-]
-
-gold_keywords = [
-    "gold", "xauusd", "inflation", "interest", "dollar", "commodities",
-    "usd", "rates", "yield", "bond", "tightening", "hawkish", "dovish"
-]
 
 # =================== תבניות תאריך ===================
 date_patterns = [
