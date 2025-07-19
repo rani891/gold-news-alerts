@@ -1,11 +1,10 @@
-
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
-from forexfactory_scraper import get_forexfactory_alerts
+from forexfactory_scraper import fetch_forexfactory_events
 
 app = Flask(__name__)
 
@@ -22,10 +21,8 @@ sources = {
     "Federal Reserve": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
     "ECB": "https://www.ecb.europa.eu/press/pr/date/html/index.en.html",
     "BOJ": "https://www.boj.or.jp/en/announcements/release_2024/index.htm/",
-    "IMF": "https://www.imf.org/en/News",
     "Bank of England": "https://www.bankofengland.co.uk/news",
     "US Treasury": "https://home.treasury.gov/news",
-    "G7": "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/g7/news-nouvelles.aspx?lang=eng",
 }
 
 patterns = [
@@ -68,40 +65,24 @@ def get_direction(text):
     if any(w in txt for w in down_keywords): return "down"
     return ""
 
-TEMPLATE = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>GOLD-news-alerts</title>
-</head>
-<body>
-    <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
-    {% if results %}
-        <ul>
-        {% for res in results %}
-            <li>
-                <b>{{ res['source'] }}</b>:
-                <a href="{{ res['url'] }}" target="_blank">{{ res['text'] }}</a>
-                {% if res['gold'] %}<span style="color:orange"> Gold/USD</span>{% endif %}
-                {% if res['direction'] == 'up' %} 🔼{% elif res['direction'] == 'down' %} 🔽{% endif %}
-                {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p style="color:red;"><b>⚠️ אין תוצאה רלוונטית.</b></p>
-    {% endif %}
-</body>
-</html>
-'''
-
+TEMPLATE = """
+<!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
+<h2>התראות רלוונטיות לזהב ולדולר</h2>
+{% if results %}<ul>
+{% for res in results %}<li><b>{{ res['source'] }}</b>: <a href='{{ res['url'] }}' target='_blank'>{{ res['text'] }}</a>
+{% if res['gold'] %} <span style='color:orange'>Gold/USD</span>{% endif %}
+{% if res['direction'] == 'up' %} UP{% elif res['direction'] == 'down' %} DOWN{% endif %}
+{% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}</li>
+{% endfor %}</ul>
+{% else %}<p style='color:red;'><b>אין תוצאה רלוונטית.</b></p>{% endif %}
+</body></html>
+"""
 
 @app.route("/")
 def index():
     results = []
     today = datetime.now()
-    cutoff = today - timedelta(days=30)
+    cutoff = today - timedelta(days=1)
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for name, url in sources.items():
@@ -118,9 +99,7 @@ def index():
                 if is_relevant(text):
                     gold = is_gold_related(text)
                     date_obj = extract_date(text) or extract_date_from_page(href)
-                    if not date_obj:
-                        continue
-                    if date_obj < cutoff:
+                    if not date_obj or date_obj < today:
                         continue
                     results.append({
                         "source": name,
@@ -134,8 +113,8 @@ def index():
             results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
 
     try:
-        ff_results = get_forexfactory_alerts(keywords, gold_keywords, up_keywords, down_keywords)
-        results.extend(ff_results)
+        forex_data = fetch_forexfactory_events()
+        results.extend(forex_data)
     except Exception as e:
         results.append({"source": "ForexFactory", "url": "https://www.forexfactory.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
 
