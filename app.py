@@ -25,7 +25,7 @@ def index():
 
     for name, url in sources.items():
         try:
-            resp = requests.get(url, headers=headers, timeout=6)
+            resp = requests.get(url, headers=headers, timeout=12)
             soup = BeautifulSoup(resp.text, "html.parser")
             links = [a for a in soup.find_all("a", href=True) if len(a.get_text(strip=True)) > 10][:60]
             for link in links:
