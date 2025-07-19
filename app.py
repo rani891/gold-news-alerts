@@ -2,6 +2,7 @@ from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+import os
 from forexfactory_scraper import get_forexfactory_events
 from dailyfx_scraper import get_dailyfx_events
 from investing_scraper import get_investing_events
@@ -19,16 +20,12 @@ sources = {
 def index():
     results = []
     today = datetime.now()
-    cutoff = today - timedelta(days=1)
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for name, url in sources.items():
         try:
-    response = requests.get(url, timeout=20)
-    # ...
-except requests.exceptions.RequestException:
-    return f"שגיאה זמנית: לא ניתן להתחבר ל־{source_name}"
-            soup = BeautifulSoup(resp.text, "html.parser")
+            response = requests.get(url, headers=headers, timeout=20)
+            soup = BeautifulSoup(response.text, "html.parser")
             links = [a for a in soup.find_all("a", href=True) if len(a.get_text(strip=True)) > 10][:60]
             for link in links:
                 text = link.get_text(strip=True)
@@ -56,7 +53,8 @@ except requests.exceptions.RequestException:
     for fetcher in [get_forexfactory_events, get_dailyfx_events, get_investing_events]:
         try:
             for item in fetcher():
-                if item["date"] < today:
+                item_date = item.get("date")
+                if isinstance(item_date, datetime) and item_date < today:
                     continue
                 results.append(item)
         except Exception as e:
