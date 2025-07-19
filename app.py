@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
@@ -24,8 +25,8 @@ def index():
 
     for name, url in sources.items():
         try:
-            response = requests.get(url, headers=headers, timeout=20)
-            soup = BeautifulSoup(response.text, "html.parser")
+            resp = requests.get(url, headers=headers, timeout=6)
+            soup = BeautifulSoup(resp.text, "html.parser")
             links = [a for a in soup.find_all("a", href=True) if len(a.get_text(strip=True)) > 10][:60]
             for link in links:
                 text = link.get_text(strip=True)
@@ -48,17 +49,30 @@ def index():
                         "direction": get_direction(text)
                     })
         except Exception as e:
-            results.append({"source": name, "text": f"שגיאה: {e}", "url": "#", "date": "-", "gold": False, "direction": ""})
+            results.append({
+                "source": name,
+                "text": f"שגיאה: {str(e)}",
+                "url": "#",
+                "date": "-",
+                "gold": False,
+                "direction": ""
+            })
 
     for fetcher in [get_forexfactory_events, get_dailyfx_events, get_investing_events]:
         try:
             for item in fetcher():
-                item_date = item.get("date")
-                if isinstance(item_date, datetime) and item_date < today:
+                if item["date"] < today:
                     continue
                 results.append(item)
         except Exception as e:
-            results.append({"source": fetcher.__name__.replace("get_", "").replace("_events", "").capitalize(), "text": f"שגיאה: {e}", "url": "#", "date": "-", "gold": False, "direction": ""})
+            results.append({
+                "source": fetcher.__name__.replace("get_", "").replace("_events", "").capitalize(),
+                "text": f"שגיאה: {str(e)}",
+                "url": "#",
+                "date": "-",
+                "gold": False,
+                "direction": ""
+            })
 
     results = sorted(results, key=lambda x: x["date"])
     html = "<h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2><ul>"
