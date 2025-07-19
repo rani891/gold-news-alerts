@@ -48,9 +48,10 @@ def extract_date(text):
 
 def extract_date_from_page(url):
     try:
+        headers = {"User-Agent": "Mozilla/5.0"}
         if not url.endswith(".htm") and "news" not in url:
             return None
-        return extract_date(requests.get(url, timeout=3).text)
+        return extract_date(requests.get(url, headers=headers, timeout=3).text)
     except: return None
 
 def is_relevant(text):
@@ -65,7 +66,7 @@ def get_direction(text):
     if any(w in txt for w in down_keywords): return "down"
     return ""
 
-TEMPLATE = """
+TEMPLATE = '''
 <!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
 <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
 {% if results %}<ul>
@@ -76,15 +77,17 @@ TEMPLATE = """
 {% endfor %}</ul>
 {% else %}<p style='color:red;'><b>⚠️ אין תוצאה רלוונטית.</b></p>{% endif %}
 </body></html>
-"""
+'''
 
 @app.route("/")
 def index():
     results = []
     cutoff = datetime.now() - timedelta(days=60)
+    headers = {"User-Agent": "Mozilla/5.0"}
     for name, url in sources.items():
         try:
-            soup = BeautifulSoup(requests.get(url, timeout=10).text, "html.parser")
+            resp = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(resp.text, "html.parser")
             links = soup.find_all("a")[:100]
             for link in links:
                 text = link.get_text(strip=True)
@@ -106,7 +109,7 @@ def index():
                         "direction": get_direction(text)
                     })
         except Exception as e:
-            results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+            results.append({"source": name, "url": url, "text": f"שגיאה בגישה לאתר: {e}", "date": "-", "gold": False, "direction": ""})
     return render_template_string(TEMPLATE, results=results)
 
 if __name__ == "__main__":
