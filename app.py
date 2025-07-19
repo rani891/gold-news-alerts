@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import re
 import os
 
-from forexfactory_scraper import get_forexfactory_events
 from dailyfx_scraper import get_dailyfx_events
+from forexfactory_scraper import get_forexfactory_events
 from investing_scraper import get_investing_events
 
 app = Flask(__name__)
