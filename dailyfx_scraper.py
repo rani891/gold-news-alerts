@@ -1,24 +1,43 @@
+
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def get_dailyfx_events():
-    url = "https://www.dailyfx.com/news"
+    url = "https://www.dailyfx.com/economic-calendar"
     headers = {"User-Agent": "Mozilla/5.0"}
+    events = []
     try:
-        resp = requests.get(url, headers=headers, timeout=8)
+        resp = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(resp.text, "html.parser")
-        articles = soup.find_all("a", class_="dfx-articleCard_link__PbG1W")
-        results = []
-        for article in articles[:30]:
-            title = article.get_text(strip=True)
-            href = article["href"]
-            full_url = href if href.startswith("http") else "https://www.dailyfx.com" + href
-            results.append({
+        rows = soup.select("tr.js-event-item")
+        for row in rows:
+            title = row.get("data-event-title", "")
+            date_str = row.get("data-event-datetime", "")
+            if not title or not date_str:
+                continue
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+            except:
+                continue
+            if date_obj < datetime.now():
+                continue
+            link = "https://www.dailyfx.com/economic-calendar"
+            events.append({
                 "source": "DailyFX",
-                "url": full_url,
-                "text": title
+                "url": link,
+                "text": title.strip(),
+                "date": date_obj.strftime("%d/%m/%Y"),
+                "gold": "gold" in title.lower() or "usd" in title.lower(),
+                "direction": ""
             })
-        return results
     except Exception as e:
-        return [{"source": "DailyFX", "url": url, "text": f"שגיאה: {e}"}]
+        events.append({
+            "source": "DailyFX",
+            "url": url,
+            "text": f"שגיאה: {e}",
+            "date": "-",
+            "gold": False,
+            "direction": ""
+        })
+    return events
