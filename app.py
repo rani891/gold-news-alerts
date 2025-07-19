@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
-from forexfactory_scraper import get_forexfactory_events
+from forexfactory_scraper import get_forexfactory_events  # ✅ נכון
 
 app = Flask(__name__)
 
@@ -82,7 +82,6 @@ TEMPLATE = """
 def index():
     results = []
     today = datetime.now()
-    cutoff = today - timedelta(days=1)
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for name, url in sources.items():
@@ -93,7 +92,8 @@ def index():
             for link in links:
                 text = link.get_text(strip=True)
                 href = link.get("href", "")
-                if not href: continue
+                if not href:
+                    continue
                 if not href.startswith("http"):
                     href = url.rstrip("/") + "/" + href.lstrip("/")
                 if is_relevant(text):
@@ -110,13 +110,30 @@ def index():
                         "direction": get_direction(text)
                     })
         except Exception as e:
-            results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+            results.append({
+                "source": name,
+                "url": url,
+                "text": f"שגיאה: {e}",
+                "date": "-",
+                "gold": False,
+                "direction": ""
+            })
 
+    # --- הוספת תוצאות מ־ForexFactory ---
     try:
-        forex_data = fetch_forexfactory_events()
-        results.extend(forex_data)
+        ff_events = get_forexfactory_events()
+        for event in ff_events:
+            if event["date"] >= today:
+                results.append(event)
     except Exception as e:
-        results.append({"source": "ForexFactory", "url": "https://www.forexfactory.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+        results.append({
+            "source": "ForexFactory",
+            "url": "https://www.forexfactory.com/calendar",
+            "text": f"שגיאה: {e}",
+            "date": "-",
+            "gold": False,
+            "direction": ""
+        })
 
     return render_template_string(TEMPLATE, results=results)
 
