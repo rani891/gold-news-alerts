@@ -1,9 +1,11 @@
+
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
+from forexfactory_scraper import get_forexfactory_alerts
 
 app = Flask(__name__)
 
@@ -66,7 +68,7 @@ def get_direction(text):
     if any(w in txt for w in down_keywords): return "down"
     return ""
 
-TEMPLATE = """
+TEMPLATE = f"""
 <!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
 <h2>התראות רלוונטיות לזהב ולדולר</h2>
 {% if results %}<ul>
@@ -83,7 +85,7 @@ TEMPLATE = """
 def index():
     results = []
     today = datetime.now()
-    cutoff = today
+    cutoff = today - timedelta(days=30)
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for name, url in sources.items():
@@ -114,6 +116,13 @@ def index():
                     })
         except Exception as e:
             results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+
+    try:
+        ff_results = get_forexfactory_alerts(keywords, gold_keywords, up_keywords, down_keywords)
+        results.extend(ff_results)
+    except Exception as e:
+        results.append({"source": "ForexFactory", "url": "https://www.forexfactory.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+
     return render_template_string(TEMPLATE, results=results)
 
 if __name__ == "__main__":
