@@ -24,7 +24,10 @@ def index():
 
     for name, url in sources.items():
         try:
-            resp = requests.get(url, headers=headers, timeout=8)
+    response = requests.get(url, timeout=20)
+    # ...
+except requests.exceptions.RequestException:
+    return f"שגיאה זמנית: לא ניתן להתחבר ל־{source_name}"
             soup = BeautifulSoup(resp.text, "html.parser")
             links = [a for a in soup.find_all("a", href=True) if len(a.get_text(strip=True)) > 10][:60]
             for link in links:
