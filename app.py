@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
@@ -84,7 +83,7 @@ TEMPLATE = """
 def index():
     results = []
     today = datetime.now()
-    cutoff = today - timedelta(days=30)
+    cutoff = today
     headers = {"User-Agent": "Mozilla/5.0"}
 
     for name, url in sources.items():
