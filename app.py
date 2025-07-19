@@ -6,7 +6,7 @@ import re
 import os
 
 from forexfactory_scraper import get_forexfactory_events
-from dailyfx_scraper import fetch_dailyfx_events
+from dailyfx_scraper import get_dailyfx_events
 from investing_scraper import fetch_investing_events
 
 app = Flask(__name__)
