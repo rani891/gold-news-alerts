@@ -1,12 +1,13 @@
-
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
+
 from forexfactory_scraper import get_forexfactory_events
-from tradingeconomics_scraper import get_tradingeconomics_events
+from dailyfx_scraper import fetch_dailyfx_events
+from investing_scraper import fetch_investing_events
 
 app = Flask(__name__)
 
@@ -74,7 +75,7 @@ TEMPLATE = """
 <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
 {% if results %}<ul>
 {% for res in results %}<li><b>{{ res['source'] }}</b>: <a href='{{ res['url'] }}' target='_blank'>{{ res['text'] }}</a>
-{% if res['gold'] %} <span style='color:orange'>🔶 Gold/USD</span>{% endif %}
+{% if res['gold'] %} <span style='color:orange'>Gold/USD</span>{% endif %}
 {% if res['direction'] == 'up' %} 🔼{% elif res['direction'] == 'down' %} 🔽{% endif %}
 {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}</li>
 {% endfor %}</ul>
@@ -86,8 +87,10 @@ TEMPLATE = """
 def index():
     results = []
     today = datetime.now()
+    cutoff = today - timedelta(days=1)
     headers = {"User-Agent": "Mozilla/5.0"}
 
+    # Scrape primary sources
     for name, url in sources.items():
         try:
             resp = requests.get(url, headers=headers, timeout=8)
@@ -115,21 +118,24 @@ def index():
         except Exception as e:
             results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
 
-    # ForexFactory
-    try:
-        for event in get_forexfactory_events():
-            if event["date"] >= today:
-                results.append(event)
-    except Exception as e:
-        results.append({"source": "ForexFactory", "url": "https://www.forexfactory.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
-
-    # TradingEconomics
-    try:
-        for event in get_tradingeconomics_events():
-            if event["date"] >= today:
-                results.append(event)
-    except Exception as e:
-        results.append({"source": "TradingEconomics", "url": "https://tradingeconomics.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+    # Add events from additional scrapers
+    for fetcher in [get_forexfactory_events, fetch_dailyfx_events, fetch_investing_events]:
+        try:
+            for event in fetcher():
+                if is_relevant(event["title"]):
+                    results.append({
+                        "source": event["source"],
+                        "url": event["url"],
+                        "text": event["title"],
+                        "date": event["datetime"].strftime("%d/%m/%Y") if event["datetime"] else "לא מזוהה",
+                        "gold": is_gold_related(event["title"]),
+                        "direction": get_direction(event["title"])
+                    })
+        except Exception as e:
+            results.append({
+                "source": fetcher.__name__.replace("fetch_", "").replace("_events", "").capitalize(),
+                "url": "#", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""
+            })
 
     return render_template_string(TEMPLATE, results=results)
 
