@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
-from forexfactory_scraper import fetch_forexfactory_events
+from forexfactory_scraper import get_forexfactory_events
 
 app = Flask(__name__)
 
