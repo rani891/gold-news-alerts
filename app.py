@@ -1,10 +1,12 @@
+
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import os
-from forexfactory_scraper import get_forexfactory_events  # ✅ נכון
+from forexfactory_scraper import get_forexfactory_events
+from tradingeconomics_scraper import get_tradingeconomics_events
 
 app = Flask(__name__)
 
@@ -21,8 +23,10 @@ sources = {
     "Federal Reserve": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
     "ECB": "https://www.ecb.europa.eu/press/pr/date/html/index.en.html",
     "BOJ": "https://www.boj.or.jp/en/announcements/release_2024/index.htm/",
+    "IMF": "https://www.imf.org/en/News",
     "Bank of England": "https://www.bankofengland.co.uk/news",
     "US Treasury": "https://home.treasury.gov/news",
+    "G7": "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/g7/news-nouvelles.aspx?lang=eng",
 }
 
 patterns = [
@@ -67,14 +71,14 @@ def get_direction(text):
 
 TEMPLATE = """
 <!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
-<h2>התראות רלוונטיות לזהב ולדולר</h2>
+<h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
 {% if results %}<ul>
 {% for res in results %}<li><b>{{ res['source'] }}</b>: <a href='{{ res['url'] }}' target='_blank'>{{ res['text'] }}</a>
-{% if res['gold'] %} <span style='color:orange'>Gold/USD</span>{% endif %}
-{% if res['direction'] == 'up' %} UP{% elif res['direction'] == 'down' %} DOWN{% endif %}
+{% if res['gold'] %} <span style='color:orange'>🔶 Gold/USD</span>{% endif %}
+{% if res['direction'] == 'up' %} 🔼{% elif res['direction'] == 'down' %} 🔽{% endif %}
 {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}</li>
 {% endfor %}</ul>
-{% else %}<p style='color:red;'><b>אין תוצאה רלוונטית.</b></p>{% endif %}
+{% else %}<p style='color:red;'><b>⚠️ אין תוצאה רלוונטית.</b></p>{% endif %}
 </body></html>
 """
 
@@ -92,8 +96,7 @@ def index():
             for link in links:
                 text = link.get_text(strip=True)
                 href = link.get("href", "")
-                if not href:
-                    continue
+                if not href: continue
                 if not href.startswith("http"):
                     href = url.rstrip("/") + "/" + href.lstrip("/")
                 if is_relevant(text):
@@ -110,30 +113,23 @@ def index():
                         "direction": get_direction(text)
                     })
         except Exception as e:
-            results.append({
-                "source": name,
-                "url": url,
-                "text": f"שגיאה: {e}",
-                "date": "-",
-                "gold": False,
-                "direction": ""
-            })
+            results.append({"source": name, "url": url, "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
 
-    # --- הוספת תוצאות מ־ForexFactory ---
+    # ForexFactory
     try:
-        ff_events = get_forexfactory_events()
-        for event in ff_events:
+        for event in get_forexfactory_events():
             if event["date"] >= today:
                 results.append(event)
     except Exception as e:
-        results.append({
-            "source": "ForexFactory",
-            "url": "https://www.forexfactory.com/calendar",
-            "text": f"שגיאה: {e}",
-            "date": "-",
-            "gold": False,
-            "direction": ""
-        })
+        results.append({"source": "ForexFactory", "url": "https://www.forexfactory.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
+
+    # TradingEconomics
+    try:
+        for event in get_tradingeconomics_events():
+            if event["date"] >= today:
+                results.append(event)
+    except Exception as e:
+        results.append({"source": "TradingEconomics", "url": "https://tradingeconomics.com/calendar", "text": f"שגיאה: {e}", "date": "-", "gold": False, "direction": ""})
 
     return render_template_string(TEMPLATE, results=results)
 
