@@ -68,18 +68,34 @@ def get_direction(text):
     if any(w in txt for w in down_keywords): return "down"
     return ""
 
-TEMPLATE = f"""
-<!DOCTYPE html><html><head><meta charset='UTF-8'><title>GOLD-news-alerts</title></head><body>
-<h2>התראות רלוונטיות לזהב ולדולר</h2>
-{% if results %}<ul>
-{% for res in results %}<li><b>{{ res['source'] }}</b>: <a href='{{ res['url'] }}' target='_blank'>{{ res['text'] }}</a>
-{% if res['gold'] %} <span style='color:orange'>Gold/USD</span>{% endif %}
-{% if res['direction'] == 'up' %} UP{% elif res['direction'] == 'down' %} DOWN{% endif %}
-{% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}</li>
-{% endfor %}</ul>
-{% else %}<p style='color:red;'><b>אין תוצאה רלוונטית.</b></p>{% endif %}
-</body></html>
-"""
+TEMPLATE = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>GOLD-news-alerts</title>
+</head>
+<body>
+    <h2>🔔 כל ההודעות הרלוונטיות לזהב ולדולר 🔔</h2>
+    {% if results %}
+        <ul>
+        {% for res in results %}
+            <li>
+                <b>{{ res['source'] }}</b>:
+                <a href="{{ res['url'] }}" target="_blank">{{ res['text'] }}</a>
+                {% if res['gold'] %}<span style="color:orange"> Gold/USD</span>{% endif %}
+                {% if res['direction'] == 'up' %} 🔼{% elif res['direction'] == 'down' %} 🔽{% endif %}
+                {% if res['date'] != "לא מזוהה" %} ({{ res['date'] }}){% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p style="color:red;"><b>⚠️ אין תוצאה רלוונטית.</b></p>
+    {% endif %}
+</body>
+</html>
+'''
+
 
 @app.route("/")
 def index():
