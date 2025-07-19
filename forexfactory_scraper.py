@@ -6,35 +6,26 @@ from datetime import datetime
 import time
 
 def get_forexfactory_alerts(keywords, gold_keywords, up_keywords, down_keywords):
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-
-    driver = webdriver.Chrome(options=options)
-    driver.get("https://www.forexfactory.com/calendar")
-
-    time.sleep(5)
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
-
-    results = []
-    today = datetime.now().date()
+    # ... (אותו הקוד עד השלב של הלולאה)
+    current_date = datetime.now().date()
 
     for row in soup.select("tr.calendar__row"):
         try:
             time_cell = row.select_one(".calendar__time")
             title_cell = row.select_one(".calendar__event-title")
-            impact_cell = row.select_one(".calendar__impact-icon")
             currency_cell = row.select_one(".calendar__currency")
 
             text = title_cell.text.strip()
             currency = currency_cell.text.strip()
-            date_obj = today
-            url = "https://www.forexfactory.com/calendar"  # No specific post link
+            time_text = time_cell.text.strip().lower()
+
+            # התעלם משורות ריקות או עבר
+            if not text or "all day" in time_text or time_text in ("", "n/a"):
+                continue
+
+            # שים תאריך היום
+            date_obj = current_date
+            url = "https://www.forexfactory.com/calendar"
 
             is_relevant = any(k in text.lower() for k in keywords)
             is_gold = any(k in text.lower() for k in gold_keywords)
@@ -52,5 +43,3 @@ def get_forexfactory_alerts(keywords, gold_keywords, up_keywords, down_keywords)
                 })
         except:
             continue
-
-    return results
