@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template_string
 import requests
 from bs4 import BeautifulSoup
@@ -8,6 +7,7 @@ from forexfactory_scraper import get_forexfactory_events
 from dailyfx_scraper import get_dailyfx_events
 from investing_scraper import get_investing_events
 from utils import is_relevant, is_gold_related, extract_date, extract_date_from_page, get_direction
+from imf_scraper import get_imf_events
 
 app = Flask(__name__)
 
@@ -58,7 +58,7 @@ def index():
                 "direction": ""
             })
 
-    for fetcher in [get_forexfactory_events, get_dailyfx_events, get_investing_events]:
+    for fetcher in [get_forexfactory_events, get_dailyfx_events, get_investing_events, get_imf_events]:
         try:
             for item in fetcher():
                 if item["date"] < today:
